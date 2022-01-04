@@ -43,7 +43,9 @@ class TitleDaoFake(initialTitle: String) : TitleDao {
 
     override suspend fun insertTitle(title: Title) {
         insertedForNext.send(title)
+        println("DaoFake send channel: $title")
         _titleLiveData.value = title
+        println("DaoFake insert complete: $title")
     }
 
     private val _titleLiveData = MutableLiveData<Title?>(Title(initialTitle))
@@ -72,11 +74,13 @@ class TitleDaoFake(initialTitle: String) : TitleDao {
         runBlocking {
             // wait for the next insertion to complete
             try {
+                println("DaoFake: try to receive")
                 withTimeout(timeout) {
                     result = insertedForNext.receive().title
+                    println("DaoFake: fetch result $result")
                 }
             } catch (ex: TimeoutCancellationException) {
-                // ignore
+                println("TestingFakes: ${ex.message}")
             }
         }
         return result
