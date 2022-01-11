@@ -24,6 +24,8 @@ import com.example.android.advancedcoroutines.util.CacheOnSuccess
 import com.example.android.advancedcoroutines.utils.ComparablePair
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
 
 /**
@@ -65,6 +67,27 @@ class PlantRepository private constructor(
             }
         }
 
+    /**
+     * When the result of customSortFlow is available,
+     * this will combine it with the latest value from
+     * the flow above. Thus, as long as both [plants]
+     * and [sortOrder] are have an initial value (their
+     * flow has emitted at least one value), any change
+     * to either [plants] or [sortOrder] will call
+     * [plants.applySort(sortOrder)]
+    */
+    val plantsFlow: Flow<List<Plant>>
+        get() = plantDao.getPlantsFlow()
+
+            .combine(customSortFlow) { plants, sortOrder ->
+                plants.applySort(sortOrder)
+            }
+            .flowOn(Dispatchers.Default)
+            .conflate()
+
+    fun getPlantsFlowWithGrowZone(growZone: GrowZone): Flow<List<Plant>> {
+        return plantDao.getPlantsFlowWithGrowZoneNumber(growZone.number)
+    }
 
     /**
      * Returns true if we should make a network request.
@@ -114,6 +137,12 @@ class PlantRepository private constructor(
         CacheOnSuccess(onErrorFallback = { listOf<String>() }) {
             plantService.customPlantSortOrder()
         }
+
+    private val customSortFlow = plantsListSortOrderCache::getOrAwait.asFlow()
+//        .onStart {
+//            emit(listOf())
+//            delay(1_500)
+//        }
 
     private fun List<Plant>.applySort(customSortOrder: List<String>): List<Plant> {
         return sortedBy { plant ->

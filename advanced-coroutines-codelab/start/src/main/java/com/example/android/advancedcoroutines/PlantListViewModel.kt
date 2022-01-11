@@ -16,12 +16,10 @@
 
 package com.example.android.advancedcoroutines
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.switchMap
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 
 /**
@@ -59,6 +57,8 @@ class PlantListViewModel internal constructor(
      */
     private val growZone = MutableLiveData<GrowZone>(NoGrowZone)
 
+    private val growZoneFlow = MutableStateFlow<GrowZone>(NoGrowZone)
+
     /**
      * A list of plants that updates based on the current filter.
      */
@@ -70,9 +70,23 @@ class PlantListViewModel internal constructor(
         }
     }
 
+    val plantsUsingFlow : LiveData<List<Plant>>
+        get() = growZoneFlow.flatMapLatest { growZone ->
+            if (growZone == NoGrowZone) {
+                plantRepository.plantsFlow
+            } else {
+                plantRepository.getPlantsFlowWithGrowZone(growZone)
+            }
+        }.asLiveData()
+
     init {
         // When creating a new ViewModel, clear the grow zone and perform any related udpates
         clearGrowZoneNumber()
+
+        // fetch the full plant list
+        launchDataLoad {
+            plantRepository.tryUpdateRecentPlantsCache()
+        }
     }
 
     /**
@@ -83,6 +97,7 @@ class PlantListViewModel internal constructor(
      */
     fun setGrowZoneNumber(num: Int) {
         growZone.value = GrowZone(num)
+        growZoneFlow.value = GrowZone(num)
 
         // initial code version, will move during flow rewrite
         launchDataLoad { plantRepository.tryUpdateRecentPlantsCache() }
@@ -96,6 +111,7 @@ class PlantListViewModel internal constructor(
      */
     fun clearGrowZoneNumber() {
         growZone.value = NoGrowZone
+        growZoneFlow.value = NoGrowZone
 
         // initial code version, will move during flow rewrite
         launchDataLoad { plantRepository.tryUpdateRecentPlantsCache() }
