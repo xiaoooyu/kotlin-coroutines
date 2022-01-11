@@ -9,9 +9,13 @@ import retrofit2.http.GET
 
 class NetworkService {
 
+    private val okHttpClient = OkHttpClient.Builder()
+        .addInterceptor(AssetNetworkInterceptor())
+        .build()
+
     private val retrofit = Retrofit.Builder()
         .baseUrl("https://raw.githubusercontent.com/")
-        .client(OkHttpClient())
+        .client(okHttpClient)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
