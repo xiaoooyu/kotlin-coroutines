@@ -78,7 +78,6 @@ class PlantRepository private constructor(
     */
     val plantsFlow: Flow<List<Plant>>
         get() = plantDao.getPlantsFlow()
-
             .combine(customSortFlow) { plants, sortOrder ->
                 plants.applySort(sortOrder)
             }
@@ -87,6 +86,14 @@ class PlantRepository private constructor(
 
     fun getPlantsFlowWithGrowZone(growZone: GrowZone): Flow<List<Plant>> {
         return plantDao.getPlantsFlowWithGrowZoneNumber(growZone.number)
+            .combine(customSortFlow) { plants, sortOrder ->
+                plants.applySort(sortOrder)
+            }
+//            .map { plantList ->
+//                val sortOrderFromNetwork = plantsListSortOrderCache.getOrAwait()
+//                val nextValue = plantList.applyMainSafeSort(sortOrderFromNetwork)
+//                nextValue
+//            }
     }
 
     /**
